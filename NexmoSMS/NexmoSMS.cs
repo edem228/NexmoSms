@@ -23,12 +23,10 @@ namespace Program
 
         public NexmoResponse Send(string from, string to, string message)
         {
-            var url = string.Format("{0}{1}", NEXMOURL, ParameterBuilder(from, to, message));
-            var request = WebRequest.Create(url) as HttpWebRequest;
+            NexmoResponse result;
+            var request = WebRequest.Create(Uri.EscapeUriString(string.Format("{0}{1}", NEXMOURL, ParameterBuilder(from, to, message)))) as HttpWebRequest;
             request.Method = "GET";
             request.ContentType = "application/json";
-
-            NexmoResponse result;
 
             using (var response = request.GetResponse() as HttpWebResponse)
             {
@@ -37,12 +35,12 @@ namespace Program
                     throw new InvalidOperationException(string.Format("Request failed : {0}", response.StatusCode));
                 }
 
-                var stream = response.GetResponseStream();
-                var json = new StreamReader(stream).ReadToEnd();
-                var reader = new MemoryStream(Encoding.UTF8.GetBytes(json));
-                var js = new DataContractJsonSerializer(typeof(NexmoResponse));                                              
-                result = js.ReadObject(reader) as NexmoResponse;
-                reader.Close();
+                var json = new StreamReader(response.GetResponseStream()).ReadToEnd();
+                using (var reader = new MemoryStream(Encoding.UTF8.GetBytes(json)))
+                {
+                    var js = new DataContractJsonSerializer(typeof (NexmoResponse));
+                    result = js.ReadObject(reader) as NexmoResponse;
+                }
             }
             return result;
         }
